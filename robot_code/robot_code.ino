@@ -40,7 +40,7 @@ int zikzak(int first)
   BLSerial.println("In Automation");
   Serial.println("In Automation");
   i = 0;
-  while (i < 75)
+  while (i < 90)
   {
     turn_left();
     delayMicroseconds(20);
@@ -101,7 +101,7 @@ int zikzak(int first)
     return 2;
   }
   i = 0;
-  while (i < 70)
+  while (i < 90)
   {
     i++;
     Serial.println("in R ");
