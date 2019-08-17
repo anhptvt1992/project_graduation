@@ -1,6 +1,5 @@
 #include <AFMotor.h>
 #include <SoftwareSerial.h>
-#include <HCSR04.h>
 
 #define SENSOR_L      A2
 #define SENSOR_F      A3
@@ -47,7 +46,7 @@ int zikzak(int first)
     i++;
     Serial.print("in L ");
     dodge_ob = detect_ob(1);
-    if(dodge_ob == 1)
+    if (dodge_ob == 1)
     {
       break;
     }
@@ -77,7 +76,7 @@ int zikzak(int first)
     forward();
     delayMicroseconds(20);
     dodge_ob = detect_ob(1);
-    if(dodge_ob == 1)
+    if (dodge_ob == 1)
     {
       break;
     }
@@ -108,7 +107,7 @@ int zikzak(int first)
     turn_right();
     delayMicroseconds(20);
     dodge_ob = detect_ob(1);
-    if(dodge_ob == 1)
+    if (dodge_ob == 1)
     {
       break;
     }
@@ -142,7 +141,7 @@ int zikzak(int first)
     forward();
     delayMicroseconds(20);
     dodge_ob = detect_ob(1);
-    if(dodge_ob == 1)
+    if (dodge_ob == 1)
     {
       break;
     }
@@ -346,8 +345,8 @@ int detect_ob(int dir)
   break_cycle = 0;
   if (50 >= analogRead(SENSOR_F))
   {
-      mleft.run(RELEASE);
-  mrigh.run(RELEASE);
+    mleft.run(RELEASE);
+    mrigh.run(RELEASE);
     delayMicroseconds(10);
     while (50 >= analogRead(SENSOR_F))
     {
@@ -360,8 +359,8 @@ int detect_ob(int dir)
 
   if (50 >= analogRead(SENSOR_L))
   {
-      mleft.run(RELEASE);
-  mrigh.run(RELEASE);
+    mleft.run(RELEASE);
+    mrigh.run(RELEASE);
     delayMicroseconds(10);
     while (50 >= analogRead(SENSOR_L))
     {
@@ -374,8 +373,8 @@ int detect_ob(int dir)
 
   if (50 >= analogRead(SENSOR_R))
   {
-      mleft.run(RELEASE);
-  mrigh.run(RELEASE);
+    mleft.run(RELEASE);
+    mrigh.run(RELEASE);
     delayMicroseconds(10);
     while (50 >= analogRead(SENSOR_R))
     {
