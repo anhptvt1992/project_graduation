@@ -20,22 +20,23 @@
    SPI SCK     SCK          52
 */
 
-#define RST_PIN         		49        // Using for RCC-522
-#define SS_PIN          		53        // Using for RCC-522
-#define DHT11_SS_1_PIN       	7		  // Using for DHT Livingroom
-#define DHT11_SS_2_PIN			8		  // USING for DHT kitchen	
+#define RST_PIN         	49        // Using for RCC-522
+#define SS_PIN          	53        // Using for RCC-522
+#define DHT11_PK_1_PIN    7		  // Using for DHT Livingroom
+#define DHT11_PB_2_PIN		8		  // USING for DHT kitchen	
 #define	WD_RC_SERVO				3		  // Using Control RC Servo windown	
-#define LIGHT_SS_PIN    		A5		  // Using like input read	
-#define GAS_SS_PIN    			A0		  // USING for ADC	GAS SENSOR MQ-02
+#define LIGHT_SS_PIN    	A5		  // Using like input read	
+#define GAS_SS_PIN        A0      // USING for ADC  GAS SENSOR MQ-02
 #define FAN_KIT_PIN				9		  // Control relay fan in kitchen
 #define LIG_KIT_PIN				10		  // Control relay light in kitchen	
 #define FAN_LIV_PIN				11		  // Control relay fan in Livingroom
 #define LIG_LIV_PIN				12		  // Control relay light in Livingroom
-#define OPEN_DOOR				6		  // Using to open main door
-#define CLOSE_DOOR				5		  // Using to close main door
+#define OPEN_DOOR         5     // Using to open main door
+#define CLOSE_DOOR        6     // Using to close main door
 #define BUZZER_GAS				4		  // Using buzz waring for gas leakage	
-#define NO_OF_ROW				4		  // Using for keypad	
-#define NO_OF_COL				3		  // Using for keypad	
+#define NO_OF_ROW				  4		  // Using for keypad	
+#define NO_OF_COL				  3		  // Using for keypad	
+#define WINDOWN_KIT_BUT   A6
 
 Scheduler ts;
 
@@ -70,13 +71,12 @@ char card_id[4] = {0x7B, 0x9B, 0x7E, 0x22};
 
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, NO_OF_ROW, NO_OF_COL );
 
-
+int windown_status;//0 is nothing, 1 is close, 2 is open
 
 void setup()
 {
   Serial.begin(9600);
 
-  //  pinMode(LIGHT_SS_PIN, INPUT);
   pinMode(FAN_KIT_PIN, OUTPUT);
   pinMode(FAN_LIV_PIN, OUTPUT);
   pinMode(LIG_KIT_PIN, OUTPUT);
@@ -84,6 +84,14 @@ void setup()
   pinMode(OPEN_DOOR, OUTPUT);
   pinMode(CLOSE_DOOR, OUTPUT);
   pinMode(BUZZER_GAS, OUTPUT);
+  pinMode(WINDOWN_KIT_BUT, INPUT);
+  digitalWrite(FAN_KIT_PIN, HIGH);
+  digitalWrite(LIG_KIT_PIN, HIGH);
+  digitalWrite(FAN_LIV_PIN, HIGH);
+  digitalWrite(LIG_LIV_PIN, HIGH);
+  digitalWrite(OPEN_DOOR, LOW);
+  digitalWrite(CLOSE_DOOR, LOW);
+  digitalWrite(BUZZER_GAS, HIGH);
   servo_windown.attach(WD_RC_SERVO);
   SPI.begin();      // Init SPI bus
   mfrc522.PCD_Init();    // Init MFRC522
@@ -91,23 +99,17 @@ void setup()
   // Print a message to the LCD.
   lcd.backlight();
   lcd.print("Hello");
-  digitalWrite(FAN_KIT_PIN, HIGH);
-  digitalWrite(LIG_KIT_PIN, HIGH);
-  digitalWrite(LIG_LIV_PIN, HIGH);
-  digitalWrite(OPEN_DOOR, LOW);
-  digitalWrite(CLOSE_DOOR, LOW);
-  digitalWrite(BUZZER_GAS, HIGH);
 
-
+  close_windown();
+  windown_status = LOW;
 }
 
 /*this loop will use for close or open door*/
 void loop()
 {
-  //  ts.execute();
-  //  door_loop();
-  kit_loop();
-  liv_loop();
+  door_loop();
+  kit_liv_loop();
+  gas_detect();
 
 }
 void door_loop()
@@ -115,12 +117,12 @@ void door_loop()
   char key = 0;
   lcd.clear();
   delay(100);
+  lcd.setCursor(0, 0);
+  lcd.print("# for RFID");
   lcd.setCursor(0, 1);
-  lcd.print("* for RFID");
-  Serial.println("* for RFID");
-  lcd.setCursor(1, 1);
-  lcd.print("# for pass");
-  Serial.println("# for pass");
+  lcd.print("* for pass");
+
+  delay(200);
 
   key = kpd.getKey();
   if ('*' == key)
@@ -132,93 +134,94 @@ void door_loop()
     scan_card();
   }
 }
-void kit_loop()
+void kit_liv_loop()
 {
-  int gas = analogRead(GAS_SS_PIN);
-  int chk = DHT_KIT.read11(DHT11_SS_2_PIN);
-  int temp = DHT_KIT.temperature;
+  int chk = DHT_KIT.read11(DHT11_PB_2_PIN);
+  int tempk = DHT_KIT.temperature;
+  int chb = DHT_LIV.read11(DHT11_PK_1_PIN);
+  int tempb = DHT_LIV.temperature;
   int light = analogRead(LIGHT_SS_PIN);
 
-  Serial.print("Gas radian: ");
-  Serial.println(gas);
-  Serial.print("Temp in kit: ");
-  Serial.println(temp);
-  Serial.print("Light in kit: ");
-  Serial.println(light);
-
-  if (gas >= 800)
+  if (30 <= tempb)
   {
-    while (gas >= 800)
-    {
-      Serial.println("GAS WARNING");
-      gas_warning();
-      turn_on_kit_fan();
-      turn_off_kit_ligh();
-      gas = analogRead(GAS_SS_PIN);
-      goto GAS_WARNING;
-    }
-  }
-
-  if (30 <= temp)
-  {
-    Serial.println("temp hig");
+    Serial.println("temp in kit high");
     turn_on_kit_fan();
   }
-  else if ((30 > temp) && (temp > 0))
+  else if (30 > tempb)
   {
-    Serial.println("temp low");
-    turn_off_kit_fan();
+    if (tempb > 0)
+    {
+      Serial.println("temp in kit low");
+      turn_off_kit_fan();
+    }
+
+  }
+
+  if (30 <= tempk)
+  {
+    Serial.println("temp in liv hig");
+    turn_on_liv_fan();
+  }
+  else if (30 > tempk)
+  {
+    if (tempk > 0)
+    {
+      Serial.println("temp in liv low");
+      turn_off_liv_fan();
+    }
+
   }
 
   if (light > 900)
   {
-    Serial.println("morning");
-    turn_off_kit_ligh();
-  }
-  else if ((light < 50) && (light > 0))
-  {
     Serial.println("night");
     turn_on_kit_ligh();
-
-  }
-
-GAS_WARNING:
-  delay(500);
-}
-
-void liv_loop()
-{
-  int chk = DHT_LIV.read11(DHT11_SS_1_PIN);
-  int temp = DHT_LIV.temperature;
-  int light = analogRead(LIGHT_SS_PIN);
-
-  Serial.print("Temp in Liv: ");
-  Serial.println(temp);
-  Serial.print("Light in Liv: ");
-  Serial.println(light);
-
-  if (30 <= temp)
-  {
-    Serial.println("temp hig liv");
-    turn_on_liv_fan();
-  }
-  else if ((30 > temp) && (temp > 0))
-  {
-    Serial.println("temp low liv");
-    turn_off_liv_fan();
-  }
-
-  if ((light < 50) && (light > 0))
-  {
-    Serial.println("night");
-    turn_off_liv_light();
-  }
-  else if (light > 900)
-  {
-    Serial.println("morning");
     turn_on_liv_light();
   }
-  delay(500);
+  else if ((light < 200) && (light > 0))
+  {
+
+    Serial.println("morning");
+    turn_off_kit_ligh();
+    turn_off_liv_light();
+  }
+
+//  int buttonStatus = digitalRead(WINDOWN_KIT_BUT);
+//  if ((buttonStatus == HIGH) && (buttonStatus != windown_status))
+//  {
+//    windown_status = buttonStatus;
+//    open_windown();
+//  }
+//  else if ((buttonStatus == LOW) && (buttonStatus != windown_status))
+//  {
+//    windown_status = buttonStatus;
+//    close_windown();
+//  }
+}
+
+void gas_detect()
+{
+  int gas = analogRead(GAS_SS_PIN);
+  Serial.print("Gas Radian: ");
+  Serial.println(gas);
+  //  gas_warning();
+  if (gas >= 750)
+  {
+    open_windown();
+    open_door();
+    delay(300);
+    stop_door();
+    while (gas >= 750)
+    {
+      Serial.println("GAS WARNING");
+      gas_warning();
+      gas = analogRead(GAS_SS_PIN);
+    }
+    close_windown();
+    close_door();
+    delay(300);
+    stop_door();
+  }
 }
 
 void scan_card()
@@ -252,21 +255,19 @@ void scan_card()
     {
       card[i] = mfrc522.uid.uidByte[i];
     }
-    Serial.println("OK");
     if (memcmp(card, card_id, 4) == 0)
     {
-
       lcd.clear();
       delay(100);
       lcd.setCursor(0, 0);
       lcd.print("OPEN DOOR");
       delay(1000);
       open_door();
-      delay(1000);
+      delay(300);
       stop_door();
       delay(3000);
       close_door();
-      delay(1000);
+      delay(300);
       stop_door();
     }
     else
@@ -276,7 +277,6 @@ void scan_card()
       lcd.setCursor(0, 0);
       lcd.print("ACCESS DENIE");
       delay(1000);
-      //      door_warning();
     }
   }
   else
@@ -338,13 +338,13 @@ void enter_pass()
       delay(100);
       lcd.setCursor(0, 0);
       lcd.print("OPEN DOOR");
-      delay(1000);
+      delayMicroseconds(1000);
       open_door();
-      delay(1000);
+      delay(300);
       stop_door();
       delay(3000);
       close_door();
-      delay(1000);
+      delay(300);
       stop_door();
     }
     else
@@ -354,7 +354,6 @@ void enter_pass()
       lcd.setCursor(0, 0);
       lcd.print("Wrong Password");
       delay(1000);
-      //      door_warning();
     }
   }
 }
@@ -381,22 +380,22 @@ void turn_off_kit_fan()
 
 void turn_on_liv_light()
 {
-  digitalWrite(LIG_LIV_PIN, HIGH);
+  digitalWrite(LIG_LIV_PIN, LOW);
 }
 
 void turn_off_liv_light()
 {
-  digitalWrite(LIG_LIV_PIN, LOW);
+  digitalWrite(LIG_LIV_PIN, HIGH);
 }
 
 void turn_on_kit_ligh()
 {
-  digitalWrite(LIG_KIT_PIN, HIGH);
+  digitalWrite(LIG_KIT_PIN, LOW);
 }
 
 void turn_off_kit_ligh()
 {
-  digitalWrite(LIG_KIT_PIN, LOW);
+  digitalWrite(LIG_KIT_PIN, HIGH);
 }
 
 void open_door()
@@ -422,7 +421,7 @@ void open_windown()
   int pos = 0;
   int i;
 
-  for (i = 0; i < 90; i++)
+  for (i = 0; i < 126; i++)
   {
     servo_windown.write(pos);
     pos++;
@@ -432,10 +431,10 @@ void open_windown()
 
 void close_windown()
 {
-  int pos = 90;
+  int pos = 126;
   int i;
 
-  for (i = 0; i < 90; i++)
+  for (i = 0; i < 126 ; i++)
   {
     servo_windown.write(pos);
     pos--;
