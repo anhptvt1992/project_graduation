@@ -20,22 +20,22 @@
    SPI SCK     SCK          52
 */
 
-#define RST_PIN         	49        // Using for RCC-522
-#define SS_PIN          	53        // Using for RCC-522
-#define DHT11_PK_1_PIN    7		  // Using for DHT Livingroom
-#define DHT11_PB_2_PIN		8		  // USING for DHT kitchen	
-#define	WD_RC_SERVO				3		  // Using Control RC Servo windown	
-#define LIGHT_SS_PIN    	A5		  // Using like input read	
+#define RST_PIN           49        // Using for RCC-522
+#define SS_PIN            53        // Using for RCC-522
+#define DHT11_PK_1_PIN    7     // Using for DHT Livingroom
+#define DHT11_PB_2_PIN    8     // USING for DHT kitchen  
+#define WD_RC_SERVO       3     // Using Control RC Servo windown 
+#define LIGHT_SS_PIN      A5      // Using like input read  
 #define GAS_SS_PIN        A0      // USING for ADC  GAS SENSOR MQ-02
-#define FAN_KIT_PIN				9		  // Control relay fan in kitchen
-#define LIG_KIT_PIN				10		  // Control relay light in kitchen	
-#define FAN_LIV_PIN				11		  // Control relay fan in Livingroom
-#define LIG_LIV_PIN				12		  // Control relay light in Livingroom
+#define FAN_KIT_PIN       9     // Control relay fan in kitchen
+#define LIG_KIT_PIN       10      // Control relay light in kitchen 
+#define FAN_LIV_PIN       11      // Control relay fan in Livingroom
+#define LIG_LIV_PIN       12      // Control relay light in Livingroom
 #define OPEN_DOOR         5     // Using to open main door
 #define CLOSE_DOOR        6     // Using to close main door
-#define BUZZER_GAS				4		  // Using buzz waring for gas leakage	
-#define NO_OF_ROW				  4		  // Using for keypad	
-#define NO_OF_COL				  3		  // Using for keypad	
+#define BUZZER_GAS        4     // Using buzz waring for gas leakage  
+#define NO_OF_ROW         4     // Using for keypad 
+#define NO_OF_COL         3     // Using for keypad 
 #define WINDOWN_KIT_BUT   A6
 
 Scheduler ts;
@@ -360,22 +360,22 @@ void enter_pass()
 
 void turn_on_liv_fan()
 {
-  digitalWrite(FAN_LIV_PIN, HIGH);
+  digitalWrite(FAN_LIV_PIN, LOW);
 }
 
 void turn_off_liv_fan()
 {
-  digitalWrite(FAN_LIV_PIN, LOW);
+  digitalWrite(FAN_LIV_PIN, HIGH);
 }
 
 void turn_on_kit_fan()
 {
-  digitalWrite(FAN_KIT_PIN, HIGH);
+  digitalWrite(FAN_KIT_PIN, LOW);
 }
 
 void turn_off_kit_fan()
 {
-  digitalWrite(FAN_KIT_PIN, LOW);
+  digitalWrite(FAN_KIT_PIN, HIGH);
 }
 
 void turn_on_liv_light()
