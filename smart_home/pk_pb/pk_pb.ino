@@ -360,22 +360,22 @@ void enter_pass()
 
 void turn_on_liv_fan()
 {
-  digitalWrite(FAN_LIV_PIN, LOW);
+  digitalWrite(FAN_LIV_PIN, HIGH);
 }
 
 void turn_off_liv_fan()
 {
-  digitalWrite(FAN_LIV_PIN, HIGH);
+  digitalWrite(FAN_LIV_PIN, LOW);
 }
 
 void turn_on_kit_fan()
 {
-  digitalWrite(FAN_KIT_PIN, LOW);
+  digitalWrite(FAN_KIT_PIN, HIGH);
 }
 
 void turn_off_kit_fan()
 {
-  digitalWrite(FAN_KIT_PIN, HIGH);
+  digitalWrite(FAN_KIT_PIN, LOW);
 }
 
 void turn_on_liv_light()
