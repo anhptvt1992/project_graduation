@@ -3,9 +3,10 @@
 #include "Adafruit_MQTT_Client.h"
 #include <Servo.h>
 
-#define WINDOWN_PIN   2
-#define FAN_PIN       5
-#define LIGHT_PIN     4
+#define WINDOWN_PIN   4
+#define FAN_PIN       0
+#define LIGHT_PIN     2
+
 #define WIFI_SSID "Sieu nhan gao"
 #define WIFI_PASS "igategw020"
 #define MQTT_SERV "io.adafruit.com"
@@ -49,6 +50,7 @@ void setup()
   pinMode(LIGHT_PIN, OUTPUT);
   
   close_windown();
+  
   digitalWrite(FAN_PIN, HIGH);
   digitalWrite(LIGHT_PIN, HIGH);
 }
@@ -98,7 +100,7 @@ void DKden()
         digitalWrite(LIGHT_PIN, LOW);
         
       }
-      else if (strcmp((char*) den.lastread, "CLOSE") == 0)
+      else if (strcmp((char*) den.lastread, "OFF") == 0)
       {
         Serial.println("Turn off the light");
         digitalWrite(LIGHT_PIN, HIGH);
@@ -119,7 +121,7 @@ void DKquat()
         digitalWrite(FAN_PIN, LOW);
         
       }
-      else if (strcmp((char*) quat.lastread, "CLOSE") == 0)
+      else if (strcmp((char*) quat.lastread, "OFF") == 0)
       {
         Serial.println("Turn off the fan");
         digitalWrite(FAN_PIN, HIGH);
@@ -177,7 +179,7 @@ void open_windown()
   int pos = 0;
   int i;
 
-  for (i = 0; i < 126; i++)
+  for (i = 0; i < 100; i++)
   {
     servo_windown.write(pos);
     pos++;
@@ -187,10 +189,10 @@ void open_windown()
 
 void close_windown()
 {
-  int pos = 126;
+  int pos = 100;
   int i;
 
-  for (i = 0; i < 126 ; i++)
+  for (i = 0; i < 100 ; i++)
   {
     servo_windown.write(pos);
     pos--;
