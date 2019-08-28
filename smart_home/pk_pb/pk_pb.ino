@@ -93,12 +93,16 @@ void setup()
   digitalWrite(CLOSE_DOOR, LOW);
   digitalWrite(BUZZER_GAS, HIGH);
   servo_windown.attach(WD_RC_SERVO);
-  SPI.begin();      // Init SPI bus
-  mfrc522.PCD_Init();    // Init MFRC522
-  lcd.init();                      // initialize the lcd
+  Serial.println("Hello");
+  lcd.init();  // initialize the lcd
+//  Serial.println("Finish LCD INIT");
   // Print a message to the LCD.
   lcd.backlight();
   lcd.print("Hello");
+  
+  SPI.begin();      // Init SPI bus
+  mfrc522.PCD_Init();    // Init MFRC522
+
 
   close_windown();
   windown_status = LOW;
@@ -186,17 +190,17 @@ void kit_liv_loop()
     turn_off_liv_light();
   }
 
-//  int buttonStatus = digitalRead(WINDOWN_KIT_BUT);
-//  if ((buttonStatus == HIGH) && (buttonStatus != windown_status))
-//  {
-//    windown_status = buttonStatus;
-//    open_windown();
-//  }
-//  else if ((buttonStatus == LOW) && (buttonStatus != windown_status))
-//  {
-//    windown_status = buttonStatus;
-//    close_windown();
-//  }
+  //  int buttonStatus = digitalRead(WINDOWN_KIT_BUT);
+  //  if ((buttonStatus == HIGH) && (buttonStatus != windown_status))
+  //  {
+  //    windown_status = buttonStatus;
+  //    open_windown();
+  //  }
+  //  else if ((buttonStatus == LOW) && (buttonStatus != windown_status))
+  //  {
+  //    windown_status = buttonStatus;
+  //    close_windown();
+  //  }
 }
 
 void gas_detect()
@@ -209,7 +213,7 @@ void gas_detect()
   {
     open_windown();
     open_door();
-    delay(300);
+    delay(626);
     stop_door();
     while (gas >= 750)
     {
@@ -219,7 +223,7 @@ void gas_detect()
     }
     close_windown();
     close_door();
-    delay(300);
+    delay(626);
     stop_door();
   }
 }
@@ -263,11 +267,11 @@ void scan_card()
       lcd.print("OPEN DOOR");
       delay(1000);
       open_door();
-      delay(300);
+      delay(626);
       stop_door();
       delay(3000);
       close_door();
-      delay(300);
+      delay(626);
       stop_door();
     }
     else
@@ -340,11 +344,11 @@ void enter_pass()
       lcd.print("OPEN DOOR");
       delayMicroseconds(1000);
       open_door();
-      delay(300);
+      delay(626);
       stop_door();
       delay(3000);
       close_door();
-      delay(300);
+      delay(626);
       stop_door();
     }
     else
