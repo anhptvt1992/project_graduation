@@ -3,6 +3,7 @@
 
 #define SENSOR_L      A2
 #define SENSOR_F      A3
+#define SENSOR_F2      A5
 #define SENSOR_R      A4
 
 SoftwareSerial BLSerial(A0, A1);//A0 is RX pin, A1 is TX pin
@@ -14,9 +15,10 @@ int auto_start;
 void setup() {
   control_comm = 1;
   auto_start = 1;
-  //  pinMode(SENSOR_L, INPUT);
-  //  pinMode(SENSOR_F, INPUT);
-  //  pinMode(SENSOR_R, INPUT);
+  pinMode(SENSOR_L, INPUT);
+  pinMode(SENSOR_F, INPUT);
+  pinMode(SENSOR_R, INPUT);
+  pinMode(SENSOR_F2, INPUT);
   Serial.begin(9600);           // set up Serial library at 9600 bps
   Serial.println("HELLO!");
   BLSerial.begin(9600);
@@ -39,13 +41,13 @@ int zikzak(int first)
   BLSerial.println("In Automation");
   Serial.println("In Automation");
   i = 0;
-  while (i < 90)
+  while (i < 100)
   {
     turn_left();
     delayMicroseconds(20);
     i++;
     Serial.print("in L ");
-    dodge_ob = detect_ob(1);
+    dodge_ob = detect_ob();
     if (dodge_ob == 1)
     {
       break;
@@ -69,13 +71,13 @@ int zikzak(int first)
     return 2;
   }
   i = 0;
-  while (i < 100)
+  while (i < 110)
   {
     i++;
     Serial.println("in F1 ");
     forward();
     delayMicroseconds(20);
-    dodge_ob = detect_ob(1);
+    dodge_ob = detect_ob();
     if (dodge_ob == 1)
     {
       break;
@@ -100,13 +102,13 @@ int zikzak(int first)
     return 2;
   }
   i = 0;
-  while (i < 90)
+  while (i < 100)
   {
     i++;
     Serial.println("in R ");
     turn_right();
     delayMicroseconds(20);
-    dodge_ob = detect_ob(1);
+    dodge_ob = detect_ob();
     if (dodge_ob == 1)
     {
       break;
@@ -134,13 +136,13 @@ int zikzak(int first)
   mrigh.run(RELEASE);
   delayMicroseconds(50);
   i = 0;
-  while (i < 100)
+  while (i < 110)
   {
     i++;
     Serial.println("in F2 ");
     forward();
     delayMicroseconds(20);
-    dodge_ob = detect_ob(1);
+    dodge_ob = detect_ob();
     if (dodge_ob == 1)
     {
       break;
@@ -338,51 +340,72 @@ void backward()
   //  mrigh.setSpeed(40);
 }
 
-int detect_ob(int dir)
+int detect_ob()
 {
   int break_cycle;
 
   break_cycle = 0;
-  if (50 >= analogRead(SENSOR_F))
+  if (0 == digitalRead(SENSOR_F))
   {
     mleft.run(RELEASE);
     mrigh.run(RELEASE);
     delayMicroseconds(10);
-    while (50 >= analogRead(SENSOR_F))
+    while (0 == digitalRead(SENSOR_F))
     {
       break_cycle = 1;
-      Serial.println("Object Front");
       backward();
-      delay(900);
+      delay(1000);
     }
   }
 
-  if (50 >= analogRead(SENSOR_L))
+  if (0 == digitalRead(SENSOR_F2))
   {
     mleft.run(RELEASE);
     mrigh.run(RELEASE);
     delayMicroseconds(10);
-    while (50 >= analogRead(SENSOR_L))
+    while (0 == digitalRead(SENSOR_F2))
     {
       break_cycle = 1;
-      Serial.println("Object LEFT");
+      backward();
+      delay(1000);
+    }
+  }
+
+  if (0 == digitalRead(SENSOR_L))
+  {
+    mleft.run(RELEASE);
+    mrigh.run(RELEASE);
+    delayMicroseconds(10);
+    while (0 == digitalRead(SENSOR_L))
+    {
+      if (break_cycle == 0)
+      {
+        backward();
+        delay(1000);
+      }
+      break_cycle = 1;
       turn_right();
       delayMicroseconds(626);
     }
   }
 
-  if (50 >= analogRead(SENSOR_R))
+  if (0 == digitalRead(SENSOR_R))
   {
     mleft.run(RELEASE);
     mrigh.run(RELEASE);
     delayMicroseconds(10);
-    while (50 >= analogRead(SENSOR_R))
+    while (0 == digitalRead(SENSOR_R))
     {
+      if (break_cycle == 0)
+      {
+        backward();
+        delay(1000);
+      }
       break_cycle = 1;
-      Serial.println("Object Right");
       turn_left();
       delayMicroseconds(626);
     }
   }
+  delayMicroseconds(10);
   return break_cycle;
 }
