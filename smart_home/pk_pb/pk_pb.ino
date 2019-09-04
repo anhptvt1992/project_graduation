@@ -5,7 +5,7 @@
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Servo.h>
-#include <TaskScheduler.h>
+#include <SoftwareSerial.h>
 
 /*
    -----------------------------------
@@ -22,28 +22,42 @@
 
 #define RST_PIN           49        // Using for RCC-522
 #define SS_PIN            53        // Using for RCC-522
-#define DHT11_PK_1_PIN    7     // Using for DHT Livingroom
-#define DHT11_PB_2_PIN    8     // USING for DHT kitchen  
-#define WD_RC_SERVO       3     // Using Control RC Servo windown 
-#define LIGHT_SS_PIN      A5      // Using like input read  
+
+/*Kitchen*/
+#define DHT11_PB_2_PIN    8     // USING for DHT kitchen 
+#define WD_RC_SERVO       3     // Using Control RC Servo windown at kitchen
 #define GAS_SS_PIN        A0      // USING for ADC  GAS SENSOR MQ-02
 #define FAN_KIT_PIN       9     // Control relay fan in kitchen
 #define LIG_KIT_PIN       10      // Control relay light in kitchen 
+
+/*Bedroom*/
+#define WD_BED_SERVO      A2    // Using Control RC Servo windown at bedroom
+#define FAN_BED_PIN       A3     // Control relay fan in bedroom
+#define LIG_BED_PIN       A4      // Control relay light in bedroom  
+
+/*Livingroom*/
+#define DHT11_PK_1_PIN    7     // Using for DHT Livingroom
+#define LIGHT_SS_PIN      A1     // Using like input read  
 #define FAN_LIV_PIN       11      // Control relay fan in Livingroom
 #define LIG_LIV_PIN       12      // Control relay light in Livingroom
+
+/*Outside and another define*/
+#define LIG_OUTSIDE_PIN   13      // Control relay light outside
 #define OPEN_DOOR         5     // Using to open main door
 #define CLOSE_DOOR        6     // Using to close main door
 #define BUZZER_GAS        4     // Using buzz waring for gas leakage  
 #define NO_OF_ROW         4     // Using for keypad 
 #define NO_OF_COL         3     // Using for keypad 
-#define WINDOWN_KIT_BUT   A6
 
-Scheduler ts;
+#define ESP_TX            A5    //TX MEGA - RX ESP
+#define ESP_RX            A6    //RX MEGA - TX ESP
+
 
 void door_loop();
 void kit_loop();
 void liv_loop();
 
+SoftwareSerial esp_serial(ESP_RX, ESP_TX);
 
 //Task t1 (100 * TASK_MILLISECOND, TASK_FOREVER, &door_loop, &ts, true);
 //Task t2 (TASK_IMMEDIATE, TASK_FOREVER, &liv_loop, &ts, true);
