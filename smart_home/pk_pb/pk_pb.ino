@@ -31,9 +31,9 @@
 #define LIG_KIT_PIN       10      // Control relay light in kitchen 
 
 /*Bedroom*/
-#define WD_BED_SERVO      A2    // Using Control RC Servo windown at bedroom
-#define FAN_BED_PIN       A3     // Control relay fan in bedroom
-#define LIG_BED_PIN       A4      // Control relay light in bedroom  
+#define WD_BED_SERVO      2    // Using Control RC Servo windown at bedroom
+#define FAN_BED_PIN       A2     // Control relay fan in bedroom
+#define LIG_BED_PIN       A3      // Control relay light in bedroom  
 
 /*Livingroom*/
 #define DHT11_PK_1_PIN    7     // Using for DHT Livingroom
@@ -64,7 +64,8 @@ SoftwareSerial esp_serial(ESP_RX, ESP_TX);
 //Task t3 (200 * TASK_MILLISECOND, TASK_FOREVER, &kit_loop, &ts, true);
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
-Servo servo_windown;
+Servo servo_windown;//use for kitchen
+Servo servo_bed_wd; //use for bedroom
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 dht DHT_KIT;
 dht DHT_LIV;
@@ -90,15 +91,17 @@ int windown_status;//0 is nothing, 1 is close, 2 is open
 void setup()
 {
   Serial.begin(9600);
-
+  esp_serial.begin(9600);
   pinMode(FAN_KIT_PIN, OUTPUT);
   pinMode(FAN_LIV_PIN, OUTPUT);
+  pinMode(FAN_BED_PIN, OUTPUT);
   pinMode(LIG_KIT_PIN, OUTPUT);
   pinMode(LIG_LIV_PIN, OUTPUT);
+  pinMode(LIG_BED_PIN, OUTPUT);
+  pinMode(LIG_OUTSIDE_PIN, OUTPUT);
   pinMode(OPEN_DOOR, OUTPUT);
   pinMode(CLOSE_DOOR, OUTPUT);
   pinMode(BUZZER_GAS, OUTPUT);
-  pinMode(WINDOWN_KIT_BUT, INPUT);
   digitalWrite(FAN_KIT_PIN, HIGH);
   digitalWrite(LIG_KIT_PIN, HIGH);
   digitalWrite(FAN_LIV_PIN, HIGH);
@@ -106,14 +109,17 @@ void setup()
   digitalWrite(OPEN_DOOR, LOW);
   digitalWrite(CLOSE_DOOR, LOW);
   digitalWrite(BUZZER_GAS, HIGH);
+
   servo_windown.attach(WD_RC_SERVO);
+  servo_bed_wd.attach(WD_BED_SERVO);
+
   Serial.println("Hello");
   lcd.init();  // initialize the lcd
-//  Serial.println("Finish LCD INIT");
+  //  Serial.println("Finish LCD INIT");
   // Print a message to the LCD.
   lcd.backlight();
   lcd.print("Hello");
-  
+
   SPI.begin();      // Init SPI bus
   mfrc522.PCD_Init();    // Init MFRC522
 
@@ -126,7 +132,8 @@ void setup()
 void loop()
 {
   door_loop();
-  kit_liv_loop();
+  outside_light_control();
+  scan_esp_com();
   gas_detect();
 
 }
@@ -152,69 +159,55 @@ void door_loop()
     scan_card();
   }
 }
-void kit_liv_loop()
+void outside_light_control()
 {
-  int chk = DHT_KIT.read11(DHT11_PB_2_PIN);
-  int tempk = DHT_KIT.temperature;
-  int chb = DHT_LIV.read11(DHT11_PK_1_PIN);
-  int tempb = DHT_LIV.temperature;
+  // int chk = DHT_KIT.read11(DHT11_PB_2_PIN);
+  // int tempk = DHT_KIT.temperature;
+  // int chb = DHT_LIV.read11(DHT11_PK_1_PIN);
+  // int tempb = DHT_LIV.temperature;
   int light = analogRead(LIGHT_SS_PIN);
 
-  if (30 <= tempb)
-  {
-    Serial.println("temp in kit high");
-    turn_on_kit_fan();
-  }
-  else if (30 > tempb)
-  {
-    if (tempb > 0)
-    {
-      Serial.println("temp in kit low");
-      turn_off_kit_fan();
-    }
+  // if (30 <= tempb)
+  // {
+  //   Serial.println("temp in kit high");
+  //   turn_on_kit_fan();
+  // }
+  // else if (30 > tempb)
+  // {
+  //   if (tempb > 0)
+  //   {
+  //     Serial.println("temp in kit low");
+  //     turn_off_kit_fan();
+  //   }
 
-  }
+  // }
 
-  if (30 <= tempk)
-  {
-    Serial.println("temp in liv hig");
-    turn_on_liv_fan();
-  }
-  else if (30 > tempk)
-  {
-    if (tempk > 0)
-    {
-      Serial.println("temp in liv low");
-      turn_off_liv_fan();
-    }
+  // if (30 <= tempk)
+  // {
+  //   Serial.println("temp in liv hig");
+  //   turn_on_liv_fan();
+  // }
+  // else if (30 > tempk)
+  // {
+  //   if (tempk > 0)
+  //   {
+  //     Serial.println("temp in liv low");
+  //     turn_off_liv_fan();
+  //   }
 
-  }
+  // }
 
   if (light > 900)
   {
     Serial.println("night");
-    turn_on_kit_ligh();
-    turn_on_liv_light();
+    turn_on_outside_light();
   }
   else if ((light < 200) && (light > 0))
   {
 
     Serial.println("morning");
-    turn_off_kit_ligh();
-    turn_off_liv_light();
+    turn_off_outside_light();
   }
-
-  //  int buttonStatus = digitalRead(WINDOWN_KIT_BUT);
-  //  if ((buttonStatus == HIGH) && (buttonStatus != windown_status))
-  //  {
-  //    windown_status = buttonStatus;
-  //    open_windown();
-  //  }
-  //  else if ((buttonStatus == LOW) && (buttonStatus != windown_status))
-  //  {
-  //    windown_status = buttonStatus;
-  //    close_windown();
-  //  }
 }
 
 void gas_detect()
@@ -396,6 +389,16 @@ void turn_off_kit_fan()
   digitalWrite(FAN_KIT_PIN, HIGH);
 }
 
+void turn_on_bed_fan()
+{
+  digitalWrite(FAN_BED_PIN, LOW);
+}
+
+void turn_off_bed_fan()
+{
+  digitalWrite(FAN_BED_PIN, HIGH);
+}
+
 void turn_on_liv_light()
 {
   digitalWrite(LIG_LIV_PIN, LOW);
@@ -414,6 +417,26 @@ void turn_on_kit_ligh()
 void turn_off_kit_ligh()
 {
   digitalWrite(LIG_KIT_PIN, HIGH);
+}
+
+void turn_on_bed_light()
+{
+  digitalWrite(LIG_BED_PIN, LOW);
+}
+
+void turn_off_bed_light()
+{
+  digitalWrite(LIG_BED_PIN, HIGH);
+}
+
+void turn_on_outside_light()
+{
+  digitalWrite(LIG_OUTSIDE_PIN, HIGH);
+}
+
+void turn_off_outside_light()
+{
+  digitalWrite(LIG_OUTSIDE_PIN, LOW);
 }
 
 void open_door()
@@ -460,6 +483,32 @@ void close_windown()
   }
 }
 
+void open_wb_bed()
+{
+  int pos = 0;
+  int i;
+
+  for (i = 0; i < 126; i++)
+  {
+    servo_bed_wd.write(pos);
+    pos++;
+    delay(50);
+  }
+}
+
+void close_wd_bed()
+{
+  int pos = 126;
+  int i;
+
+  for (i = 0; i < 126 ; i++)
+  {
+    servo_bed_wd.write(pos);
+    pos--;
+    delay(50);
+  }
+}
+
 void gas_warning()
 {
   int i;
@@ -483,5 +532,79 @@ void door_warning()
     delay(500);
     digitalWrite(BUZZER_GAS, HIGH);
     delay(100);
+  }
+}
+
+void scan_esp_com()
+{
+  String rev_str;
+  if (esp_serial.available())
+  {
+    rev_str = esp_serial.readString();
+    if (rev_str.equals("LIV FAN ON"))
+    {
+      turn_on_liv_fan();
+    }
+    else if (rev_str.equals("LIV FAN OFF"))
+    {
+      turn_off_liv_fan();
+    }
+    else if (rev_str.equals("KIT FAN ON"))
+    {
+      turn_on_kit_fan();
+    }
+    else if (rev_str.equals("KIT FAN OFF"))
+    {
+      turn_off_kit_fan();
+    }
+    else if (rev_str.equals("BED FAN ON"))
+    {
+      turn_on_bed_fan();
+    }
+    else if (rev_str.equals("BED FAN OFF"))
+    {
+      turn_off_bed_fan();
+    }
+    else if (rev_str.equals("LIV LIGHT ON"))
+    {
+      turn_on_liv_light();
+    }
+    else if (rev_str.equals("LIV LIGHT OFF"))
+    {
+      turn_off_liv_light();
+    }
+    else if (rev_str.equals("KIT LIGHT ON"))
+    {
+      turn_on_kit_ligh();
+    }
+    else if (rev_str.equals("KIT LIGHT OFF"))
+    {
+      turn_off_kit_ligh();
+    }
+    else if (rev_str.equals("BED LIGHT ON"))
+    {
+      turn_on_bed_light();
+    }
+    else if (rev_str.equals("BED LIGHT OFF"))
+    {
+      turn_off_bed_light();
+    }
+    else if (rev_str.equals("KIT OPEN WINDOWN"))
+    {
+      open_windown();
+    }
+    else if (rev_str.equals("KIT CLOSE WINDOWN"))
+    {
+      close_windown();
+    }
+    else if (rev_str.equals("BED OPEN WINDOWN"))
+    {
+      open_wb_bed();
+    }
+    else if (rev_str.equals("BED CLOSE WINDOWN"))
+    {
+      close_wd_bed();
+    }
+
   }
 }
