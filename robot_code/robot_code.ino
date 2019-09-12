@@ -71,7 +71,7 @@ int zikzak(int first)
     return 2;
   }
   i = 0;
-  while (i < 110)
+  while (i < 140)
   {
     i++;
     Serial.println("in F1 ");
@@ -136,7 +136,7 @@ int zikzak(int first)
   mrigh.run(RELEASE);
   delayMicroseconds(50);
   i = 0;
-  while (i < 110)
+  while (i < 140)
   {
     i++;
     Serial.println("in F2 ");
