@@ -5,7 +5,6 @@
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Servo.h>
-#include <SoftwareSerial.h>
 
 /*
    -----------------------------------
@@ -24,45 +23,46 @@
 #define SS_PIN            53        // Using for RCC-522
 
 /*Kitchen*/
-#define DHT11_PB_2_PIN    8     // USING for DHT kitchen 
-#define WD_RC_SERVO       3     // Using Control RC Servo windown at kitchen
+//#define DHT11_PB_2_PIN    8     // USING for DHT kitchen
+#define WD_RC_SERVO       2     // Using Control RC Servo windown at kitchen
 #define GAS_SS_PIN        A0      // USING for ADC  GAS SENSOR MQ-02
 #define FAN_KIT_PIN       9     // Control relay fan in kitchen
-#define LIG_KIT_PIN       10      // Control relay light in kitchen 
+#define LIG_KIT_PIN       8      // Control relay light in kitchen 
 
 /*Bedroom*/
-#define WD_BED_SERVO      2    // Using Control RC Servo windown at bedroom
+#define WD_BED_SERVO      3    // Using Control RC Servo windown at bedroom
 #define FAN_BED_PIN       A2     // Control relay fan in bedroom
 #define LIG_BED_PIN       A3      // Control relay light in bedroom  
 
 /*Livingroom*/
-#define DHT11_PK_1_PIN    7     // Using for DHT Livingroom
+//#define DHT11_PK_1_PIN    7     // Using for DHT Livingroom
 #define LIGHT_SS_PIN      A1     // Using like input read  
-#define FAN_LIV_PIN       11      // Control relay fan in Livingroom
+#define FAN_LIV_PIN       13      // Control relay fan in Livingroom
 #define LIG_LIV_PIN       12      // Control relay light in Livingroom
 
 /*Outside and another define*/
-#define LIG_OUTSIDE_PIN   13      // Control relay light outside
+#define LIG_OUTSIDE_PIN   10      // Control relay light outside
 #define OPEN_DOOR         5     // Using to open main door
 #define CLOSE_DOOR        6     // Using to close main door
-#define BUZZER_GAS        4     // Using buzz waring for gas leakage  
+#define BUZZER_GAS        7     // Using buzz waring for gas leakage  
 #define NO_OF_ROW         4     // Using for keypad 
 #define NO_OF_COL         3     // Using for keypad 
 
 #define ESP_TX            A5    //TX MEGA - RX ESP
 #define ESP_RX            A6    //RX MEGA - TX ESP
 
+#define KIT_WIN_CTRL      22    //D0
+#define KIT_LIG_CTRL      23    //D1
+#define KIT_FAN_CTRL      24    //D2
+#define LIV_LIG_CTRL      25    //D3
+#define LIV_FAN_CTRL      26    //D4
+#define BED_WIN_CTRL      27    //D5
+#define BED_LIG_CTRL      28    //D6
+#define BED_FAN_CTRL      29    //D7
 
 void door_loop();
 void kit_loop();
 void liv_loop();
-
-SoftwareSerial esp_serial(ESP_RX, ESP_TX);
-
-//Task t1 (100 * TASK_MILLISECOND, TASK_FOREVER, &door_loop, &ts, true);
-//Task t2 (TASK_IMMEDIATE, TASK_FOREVER, &liv_loop, &ts, true);
-//Task t3 (200 * TASK_MILLISECOND, TASK_FOREVER, &kit_loop, &ts, true);
-
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 Servo servo_windown;//use for kitchen
 Servo servo_bed_wd; //use for bedroom
@@ -86,12 +86,14 @@ char card_id[4] = {0x7B, 0x9B, 0x7E, 0x22};
 
 Keypad kpd = Keypad( makeKeymap(keys), rowPins, colPins, NO_OF_ROW, NO_OF_COL );
 
-int windown_status;//0 is nothing, 1 is close, 2 is open
+int wd_kit_status;//0 is nothing, 1 is close, 2 is open
+int wd_bed_status;//0 is nothing, 1 is close, 2 is open
 
 void setup()
 {
+  SPI.begin();      // Init SPI bus
+  mfrc522.PCD_Init();    // Init MFRC522
   Serial.begin(9600);
-  esp_serial.begin(9600);
   pinMode(FAN_KIT_PIN, OUTPUT);
   pinMode(FAN_LIV_PIN, OUTPUT);
   pinMode(FAN_BED_PIN, OUTPUT);
@@ -102,6 +104,15 @@ void setup()
   pinMode(OPEN_DOOR, OUTPUT);
   pinMode(CLOSE_DOOR, OUTPUT);
   pinMode(BUZZER_GAS, OUTPUT);
+  pinMode(KIT_WIN_CTRL, INPUT);
+  pinMode(KIT_LIG_CTRL, INPUT);
+  pinMode(KIT_FAN_CTRL, INPUT);
+  pinMode(LIV_LIG_CTRL, INPUT);
+  pinMode(LIV_FAN_CTRL, INPUT);
+  pinMode(BED_WIN_CTRL, INPUT);
+  pinMode(BED_LIG_CTRL, INPUT);
+  pinMode(BED_FAN_CTRL, INPUT);
+  //  pinMode(LIGHT_SS_PIN, INPUT);
   digitalWrite(FAN_KIT_PIN, HIGH);
   digitalWrite(LIG_KIT_PIN, HIGH);
   digitalWrite(FAN_LIV_PIN, HIGH);
@@ -113,19 +124,16 @@ void setup()
   servo_windown.attach(WD_RC_SERVO);
   servo_bed_wd.attach(WD_BED_SERVO);
 
-  Serial.println("Hello");
+  //  Serial.println("Hello");
   lcd.init();  // initialize the lcd
   //  Serial.println("Finish LCD INIT");
   // Print a message to the LCD.
   lcd.backlight();
   lcd.print("Hello");
-
-  SPI.begin();      // Init SPI bus
-  mfrc522.PCD_Init();    // Init MFRC522
-
-
-  close_windown();
-  windown_status = LOW;
+  wd_kit_status = 0;
+  wd_bed_status = 0;
+  close_wd_kit();
+  close_wd_bed();
 }
 
 /*this loop will use for close or open door*/
@@ -141,13 +149,10 @@ void door_loop()
 {
   char key = 0;
   lcd.clear();
-  delay(100);
   lcd.setCursor(0, 0);
   lcd.print("# for RFID");
   lcd.setCursor(0, 1);
   lcd.print("* for pass");
-
-  delay(200);
 
   key = kpd.getKey();
   if ('*' == key)
@@ -161,41 +166,7 @@ void door_loop()
 }
 void outside_light_control()
 {
-  // int chk = DHT_KIT.read11(DHT11_PB_2_PIN);
-  // int tempk = DHT_KIT.temperature;
-  // int chb = DHT_LIV.read11(DHT11_PK_1_PIN);
-  // int tempb = DHT_LIV.temperature;
   int light = analogRead(LIGHT_SS_PIN);
-
-  // if (30 <= tempb)
-  // {
-  //   Serial.println("temp in kit high");
-  //   turn_on_kit_fan();
-  // }
-  // else if (30 > tempb)
-  // {
-  //   if (tempb > 0)
-  //   {
-  //     Serial.println("temp in kit low");
-  //     turn_off_kit_fan();
-  //   }
-
-  // }
-
-  // if (30 <= tempk)
-  // {
-  //   Serial.println("temp in liv hig");
-  //   turn_on_liv_fan();
-  // }
-  // else if (30 > tempk)
-  // {
-  //   if (tempk > 0)
-  //   {
-  //     Serial.println("temp in liv low");
-  //     turn_off_liv_fan();
-  //   }
-
-  // }
 
   if (light > 900)
   {
@@ -213,24 +184,27 @@ void outside_light_control()
 void gas_detect()
 {
   int gas = analogRead(GAS_SS_PIN);
-  Serial.print("Gas Radian: ");
-  Serial.println(gas);
-  //  gas_warning();
-  if (gas >= 750)
+  if (gas >= 200)
   {
+    Serial.print("GAS Warning ");
+    Serial.println(gas);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("GAS WARNING");
+    gas_warning();
+    delay(100);
     open_windown();
     open_door();
-    delay(626);
+    delay(500);
     stop_door();
-    while (gas >= 750)
+    while (gas >= 200)
     {
-      Serial.println("GAS WARNING");
       gas_warning();
       gas = analogRead(GAS_SS_PIN);
     }
     close_windown();
     close_door();
-    delay(626);
+    delay(500);
     stop_door();
   }
 }
@@ -274,11 +248,11 @@ void scan_card()
       lcd.print("OPEN DOOR");
       delay(1000);
       open_door();
-      delay(626);
+      delay(500);
       stop_door();
       delay(3000);
       close_door();
-      delay(626);
+      delay(500);
       stop_door();
     }
     else
@@ -287,7 +261,7 @@ void scan_card()
       delay(100);
       lcd.setCursor(0, 0);
       lcd.print("ACCESS DENIE");
-      delay(1000);
+      delay(500);
     }
   }
   else
@@ -296,7 +270,7 @@ void scan_card()
     delay(100);
     lcd.setCursor(0, 0);
     lcd.print("TIMEOUT");
-    delay(1000);
+    delay(500);
   }
 }
 
@@ -307,7 +281,6 @@ void enter_pass()
   int count = 0;
   int i = 0;
   lcd.clear();
-  delay(100);
   lcd.setCursor(0, 0);
   lcd.print("ENTER PASS");
   Serial.println("ENTER PASS");
@@ -338,7 +311,7 @@ void enter_pass()
     delay(100);
     lcd.setCursor(0, 0);
     lcd.print("TIMEOUT");
-    delay(1000);
+    delay(500);
   }
   else
   {
@@ -351,11 +324,11 @@ void enter_pass()
       lcd.print("OPEN DOOR");
       delayMicroseconds(1000);
       open_door();
-      delay(626);
+      delay(500);
       stop_door();
       delay(3000);
       close_door();
-      delay(626);
+      delay(500);
       stop_door();
     }
     else
@@ -364,7 +337,7 @@ void enter_pass()
       delay(100);
       lcd.setCursor(0, 0);
       lcd.print("Wrong Password");
-      delay(1000);
+      delay(600);
     }
   }
 }
@@ -462,9 +435,10 @@ void open_windown()
   int pos = 0;
   int i;
 
-  for (i = 0; i < 126; i++)
+  for (i = 0; i < 100; i++)
   {
     servo_windown.write(pos);
+    servo_bed_wd.write(pos);
     pos++;
     delay(50);
   }
@@ -472,10 +446,37 @@ void open_windown()
 
 void close_windown()
 {
-  int pos = 126;
+  int pos = 100;
   int i;
 
-  for (i = 0; i < 126 ; i++)
+  for (i = 0; i < 100 ; i++)
+  {
+    servo_windown.write(pos);
+    servo_bed_wd.write(pos);
+    pos--;
+    delay(50);
+  }
+}
+
+void open_wd_kit()
+{
+  int pos = 0;
+  int i;
+
+  for (i = 0; i < 100; i++)
+  {
+    servo_windown.write(pos);
+    pos++;
+    delay(50);
+  }
+}
+
+void close_wd_kit()
+{
+  int pos = 100;
+  int i;
+
+  for (i = 0; i < 100 ; i++)
   {
     servo_windown.write(pos);
     pos--;
@@ -488,7 +489,7 @@ void open_wb_bed()
   int pos = 0;
   int i;
 
-  for (i = 0; i < 126; i++)
+  for (i = 0; i < 100; i++)
   {
     servo_bed_wd.write(pos);
     pos++;
@@ -498,10 +499,10 @@ void open_wb_bed()
 
 void close_wd_bed()
 {
-  int pos = 126;
+  int pos = 100;
   int i;
 
-  for (i = 0; i < 126 ; i++)
+  for (i = 0; i < 100 ; i++)
   {
     servo_bed_wd.write(pos);
     pos--;
@@ -529,82 +530,105 @@ void door_warning()
   for (i = 0; i < 10; i++)
   {
     digitalWrite(BUZZER_GAS, LOW);
-    delay(500);
+    delayMicroseconds(500);
     digitalWrite(BUZZER_GAS, HIGH);
-    delay(100);
+    delayMicroseconds(100);
   }
 }
 
 void scan_esp_com()
 {
-  String rev_str;
-  if (esp_serial.available())
+  if (digitalRead(LIV_FAN_CTRL))
   {
-    rev_str = esp_serial.readString();
-    if (rev_str.equals("LIV FAN ON"))
+    turn_on_liv_fan();
+  }
+  else
+  {
+    turn_off_liv_fan();
+  }
+
+  if (digitalRead(KIT_FAN_CTRL))
+  {
+    turn_on_kit_fan();
+  }
+  else
+  {
+    turn_off_kit_fan();
+  }
+
+  if (digitalRead(BED_FAN_CTRL))
+  {
+    turn_on_bed_fan();
+  }
+  else
+  {
+    turn_off_bed_fan();
+  }
+
+  if (digitalRead(LIV_LIG_CTRL))
+  {
+    turn_on_liv_light();
+  }
+  else
+  {
+    turn_off_liv_light();
+  }
+
+  if (digitalRead(KIT_LIG_CTRL))
+  {
+    turn_on_kit_ligh();
+  }
+  else
+  {
+    turn_off_kit_ligh();
+  }
+
+  if (digitalRead(BED_LIG_CTRL))
+  {
+    turn_on_bed_light();
+  }
+  else
+  {
+    turn_off_bed_light();
+  }
+
+  if (digitalRead(KIT_WIN_CTRL))
+  {
+    if(wd_kit_status == 0)
     {
-      turn_on_liv_fan();
+      open_wd_kit();
+      wd_kit_status = 1;
     }
-    else if (rev_str.equals("LIV FAN OFF"))
+    
+  }
+  else
+  {
+    if(wd_kit_status == 1)
     {
-      turn_off_liv_fan();
+      close_wd_kit();
+      wd_kit_status = 0;
     }
-    else if (rev_str.equals("KIT FAN ON"))
-    {
-      turn_on_kit_fan();
-    }
-    else if (rev_str.equals("KIT FAN OFF"))
-    {
-      turn_off_kit_fan();
-    }
-    else if (rev_str.equals("BED FAN ON"))
-    {
-      turn_on_bed_fan();
-    }
-    else if (rev_str.equals("BED FAN OFF"))
-    {
-      turn_off_bed_fan();
-    }
-    else if (rev_str.equals("LIV LIGHT ON"))
-    {
-      turn_on_liv_light();
-    }
-    else if (rev_str.equals("LIV LIGHT OFF"))
-    {
-      turn_off_liv_light();
-    }
-    else if (rev_str.equals("KIT LIGHT ON"))
-    {
-      turn_on_kit_ligh();
-    }
-    else if (rev_str.equals("KIT LIGHT OFF"))
-    {
-      turn_off_kit_ligh();
-    }
-    else if (rev_str.equals("BED LIGHT ON"))
-    {
-      turn_on_bed_light();
-    }
-    else if (rev_str.equals("BED LIGHT OFF"))
-    {
-      turn_off_bed_light();
-    }
-    else if (rev_str.equals("KIT OPEN WINDOWN"))
-    {
-      open_windown();
-    }
-    else if (rev_str.equals("KIT CLOSE WINDOWN"))
-    {
-      close_windown();
-    }
-    else if (rev_str.equals("BED OPEN WINDOWN"))
+    
+  }
+
+  if (digitalRead(BED_WIN_CTRL))
+  {
+    Serial.println("WD BED OPEN");
+    if(wd_bed_status == 0)
     {
       open_wb_bed();
+      wd_bed_status = 1;
     }
-    else if (rev_str.equals("BED CLOSE WINDOWN"))
+    
+  }
+  else
+  {
+    Serial.println("WD BED CLOSE");
+    if(wd_bed_status == 1)
     {
       close_wd_bed();
+      wd_bed_status = 0;
     }
-
+    
   }
 }
