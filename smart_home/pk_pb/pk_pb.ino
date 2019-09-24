@@ -48,17 +48,14 @@
 #define NO_OF_ROW         4     // Using for keypad 
 #define NO_OF_COL         3     // Using for keypad 
 
-#define ESP_TX            A5    //TX MEGA - RX ESP
-#define ESP_RX            A6    //RX MEGA - TX ESP
-
-#define KIT_WIN_CTRL      22    //D0
-#define KIT_LIG_CTRL      23    //D1
-#define KIT_FAN_CTRL      24    //D2
-#define LIV_LIG_CTRL      25    //D3
-#define LIV_FAN_CTRL      26    //D4
-#define BED_WIN_CTRL      27    //D5
-#define BED_LIG_CTRL      28    //D6
-#define BED_FAN_CTRL      29    //D7
+#define KIT_WIN_CTRL      A14    //D0
+#define KIT_LIG_CTRL      A13    //D1
+#define KIT_FAN_CTRL      A12    //D2
+#define LIV_LIG_CTRL      A11    //D3
+#define LIV_FAN_CTRL      A10    //D4
+#define BED_WIN_CTRL      A9     //D5
+#define BED_LIG_CTRL      A8     //D6
+#define BED_FAN_CTRL      A7     //D7
 
 void door_loop();
 void kit_loop();
@@ -70,8 +67,8 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 dht DHT_KIT;
 dht DHT_LIV;
 
-byte rowPins[NO_OF_ROW] = {A8, A9, A10, A11}; //connect to the row pinouts of the kpd
-byte colPins[NO_OF_COL] = {A12, A13, A14}; //connect to the column pinouts of the kpd
+byte rowPins[NO_OF_ROW] = {23, 25, 27, 29}; //connect to the row pinouts of the kpd
+byte colPins[NO_OF_COL] = {31, 33, 35}; //connect to the column pinouts of the kpd
 
 char keys[NO_OF_ROW][NO_OF_COL] = {
   {'1', '2', '3'},
