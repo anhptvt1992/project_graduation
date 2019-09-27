@@ -26,8 +26,8 @@
 //#define DHT11_PB_2_PIN    8     // USING for DHT kitchen
 #define WD_RC_SERVO       2     // Using Control RC Servo windown at kitchen
 #define GAS_SS_PIN        A0      // USING for ADC  GAS SENSOR MQ-02
-#define FAN_KIT_PIN       9     // Control relay fan in kitchen
-#define LIG_KIT_PIN       8      // Control relay light in kitchen 
+#define FAN_KIT_PIN       13     // Control relay fan in kitchen
+#define LIG_KIT_PIN       12      // Control relay light in kitchen 
 
 /*Bedroom*/
 #define WD_BED_SERVO      3    // Using Control RC Servo windown at bedroom
@@ -37,8 +37,8 @@
 /*Livingroom*/
 //#define DHT11_PK_1_PIN    7     // Using for DHT Livingroom
 #define LIGHT_SS_PIN      A1     // Using like input read  
-#define FAN_LIV_PIN       13      // Control relay fan in Livingroom
-#define LIG_LIV_PIN       12      // Control relay light in Livingroom
+#define FAN_LIV_PIN       9      // Control relay fan in Livingroom
+#define LIG_LIV_PIN       8      // Control relay light in Livingroom
 
 /*Outside and another define*/
 #define LIG_OUTSIDE_PIN   10      // Control relay light outside
@@ -48,14 +48,17 @@
 #define NO_OF_ROW         4     // Using for keypad 
 #define NO_OF_COL         3     // Using for keypad 
 
-#define KIT_WIN_CTRL      A14    //D0
-#define KIT_LIG_CTRL      A13    //D1
-#define KIT_FAN_CTRL      A12    //D2
-#define LIV_LIG_CTRL      A11    //D3
-#define LIV_FAN_CTRL      A10    //D4
-#define BED_WIN_CTRL      A9     //D5
-#define BED_LIG_CTRL      A8     //D6
-#define BED_FAN_CTRL      A7     //D7
+#define KIT_WIN_CTRL      A15    //D0
+#define KIT_LIG_CTRL      A14    //D1
+#define KIT_FAN_CTRL      A13    //D2
+
+#define LIV_LIG_CTRL      A12    //D3
+#define LIV_FAN_CTRL      A11    //D4
+
+#define BED_WIN_CTRL      A10     //D5
+#define BED_LIG_CTRL      A9     //D6
+#define BED_FAN_CTRL      A8     //D7
+
 
 void door_loop();
 void kit_loop();
@@ -109,11 +112,12 @@ void setup()
   pinMode(BED_WIN_CTRL, INPUT);
   pinMode(BED_LIG_CTRL, INPUT);
   pinMode(BED_FAN_CTRL, INPUT);
-  //  pinMode(LIGHT_SS_PIN, INPUT);
   digitalWrite(FAN_KIT_PIN, HIGH);
   digitalWrite(LIG_KIT_PIN, HIGH);
   digitalWrite(FAN_LIV_PIN, HIGH);
   digitalWrite(LIG_LIV_PIN, HIGH);
+  digitalWrite(BED_LIG_CTRL, HIGH);
+  digitalWrite(BED_FAN_CTRL, HIGH);
   digitalWrite(OPEN_DOOR, LOW);
   digitalWrite(CLOSE_DOOR, LOW);
   digitalWrite(BUZZER_GAS, HIGH);
@@ -122,11 +126,11 @@ void setup()
   servo_bed_wd.attach(WD_BED_SERVO);
 
   //  Serial.println("Hello");
-  lcd.init();  // initialize the lcd
+//  lcd.init();  // initialize the lcd
   //  Serial.println("Finish LCD INIT");
   // Print a message to the LCD.
-  lcd.backlight();
-  lcd.print("Hello");
+//  lcd.backlight();
+//  lcd.print("Hello");
   wd_kit_status = 0;
   wd_bed_status = 0;
   close_wd_kit();
@@ -145,19 +149,21 @@ void loop()
 void door_loop()
 {
   char key = 0;
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("# for RFID");
-  lcd.setCursor(0, 1);
-  lcd.print("* for pass");
-
+//  lcd.clear();
+//  lcd.setCursor(0, 0);
+//  lcd.print("# for RFID");
+//  lcd.setCursor(0, 1);
+//  lcd.print("* for pass");
+  delay(100);
   key = kpd.getKey();
   if ('*' == key)
   {
+    door_warning();
     enter_pass();
   }
   else if ('#' == key)
   {
+    door_warning();
     scan_card();
   }
 }
@@ -187,7 +193,7 @@ void gas_detect()
     Serial.println(gas);
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("GAS WARNING");
+//    lcd.print("GAS WARNING");
     gas_warning();
     delay(100);
     open_windown();
@@ -210,9 +216,9 @@ void scan_card()
 {
   char card[4];
   int count_time;
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("CARD PLEASE");
+//  lcd.clear();
+//  lcd.setCursor(0, 0);
+//  lcd.print("CARD PLEASE");
   delay(100);
   count_time = 0;
   lcd.setCursor(0, 1);
@@ -239,11 +245,11 @@ void scan_card()
     }
     if (memcmp(card, card_id, 4) == 0)
     {
-      lcd.clear();
-      delay(100);
-      lcd.setCursor(0, 0);
-      lcd.print("OPEN DOOR");
-      delay(1000);
+//      lcd.clear();
+//      delay(100);
+//      lcd.setCursor(0, 0);
+//      lcd.print("OPEN DOOR");
+//      delay(1000);
       open_door();
       delay(500);
       stop_door();
@@ -254,19 +260,21 @@ void scan_card()
     }
     else
     {
-      lcd.clear();
-      delay(100);
-      lcd.setCursor(0, 0);
-      lcd.print("ACCESS DENIE");
+      input_warning();
+//      lcd.clear();
+//      delay(100);
+//      lcd.setCursor(0, 0);
+//      lcd.print("ACCESS DENIE");
       delay(500);
     }
   }
   else
   {
-    lcd.clear();
-    delay(100);
-    lcd.setCursor(0, 0);
-    lcd.print("TIMEOUT");
+    input_warning();
+//    lcd.clear();
+//    delay(100);
+//    lcd.setCursor(0, 0);
+//    lcd.print("TIMEOUT");
     delay(500);
   }
 }
@@ -288,11 +296,13 @@ void enter_pass()
     key = kpd.getKey();
     if (key)
     {
+      type_key_buzz();
       pass_enter[count] = key;
       i = 0;
       count++;
-      lcd.setCursor(count, 1);
-      lcd.print("*");
+      
+//      lcd.setCursor(count, 1);
+//      lcd.print("*");
     }
     if (count == 4)
     {
@@ -304,10 +314,11 @@ void enter_pass()
 
   if (count < 4)
   {
-    lcd.clear();
+    input_warning();
+//    lcd.clear();
     delay(100);
-    lcd.setCursor(0, 0);
-    lcd.print("TIMEOUT");
+//    lcd.setCursor(0, 0);
+//    lcd.print("TIMEOUT");
     delay(500);
   }
   else
@@ -315,10 +326,10 @@ void enter_pass()
     if (!memcmp(pass, pass_enter, 4))
     {
 
-      lcd.clear();
-      delay(100);
-      lcd.setCursor(0, 0);
-      lcd.print("OPEN DOOR");
+//      lcd.clear();
+//      delay(100);
+//      lcd.setCursor(0, 0);
+//      lcd.print("OPEN DOOR");
       delayMicroseconds(1000);
       open_door();
       delay(500);
@@ -330,10 +341,11 @@ void enter_pass()
     }
     else
     {
-      lcd.clear();
-      delay(100);
-      lcd.setCursor(0, 0);
-      lcd.print("Wrong Password");
+      input_warning();
+//      lcd.clear();
+//      delay(100);
+//      lcd.setCursor(0, 0);
+//      lcd.print("Wrong Password");
       delay(600);
     }
   }
@@ -524,13 +536,45 @@ void door_warning()
 {
   int i;
 
-  for (i = 0; i < 10; i++)
+  for (i = 0; i < 2; i++)
   {
     digitalWrite(BUZZER_GAS, LOW);
-    delayMicroseconds(500);
+    delay(100);
     digitalWrite(BUZZER_GAS, HIGH);
-    delayMicroseconds(100);
+    delay(200);
   }
+}
+
+void type_key_buzz()
+{
+  digitalWrite(BUZZER_GAS, LOW);
+  delay(300);
+  digitalWrite(BUZZER_GAS, HIGH);
+}
+
+void input_warning()
+{
+  int i;for (i = 0; i < 5; i++)
+    {
+      digitalWrite(BUZZER_GAS, LOW);
+      delay(200);
+      digitalWrite(BUZZER_GAS, HIGH);
+      delay(50);
+    }
+
+}
+
+void acess_deni_warning()
+{
+  int i;
+    for (i = 0; i < 10; i++)
+    {
+      digitalWrite(BUZZER_GAS, LOW);
+      delay(100);
+      digitalWrite(BUZZER_GAS, HIGH);
+      delay(50);
+    }
+
 }
 
 void scan_esp_com()
@@ -591,41 +635,38 @@ void scan_esp_com()
 
   if (digitalRead(KIT_WIN_CTRL))
   {
-    if(wd_kit_status == 0)
+    if (wd_kit_status == 0)
     {
       open_wd_kit();
       wd_kit_status = 1;
     }
-    
+
   }
   else
   {
-    if(wd_kit_status == 1)
+    if (wd_kit_status == 1)
     {
       close_wd_kit();
       wd_kit_status = 0;
     }
-    
+
   }
 
   if (digitalRead(BED_WIN_CTRL))
   {
-    Serial.println("WD BED OPEN");
-    if(wd_bed_status == 0)
+    if (wd_bed_status == 0)
     {
       open_wb_bed();
       wd_bed_status = 1;
     }
-    
+
   }
   else
   {
-    Serial.println("WD BED CLOSE");
-    if(wd_bed_status == 1)
+    if (wd_bed_status == 1)
     {
       close_wd_bed();
       wd_bed_status = 0;
     }
-    
   }
 }

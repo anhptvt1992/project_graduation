@@ -4,14 +4,14 @@
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
-#define KIT_WIN_CTRL  D0
-#define KIT_LIG_CTRL  D1
-#define KIT_FAN_CTRL  D2
-#define LIV_LIG_CTRL  D3
-#define LIV_FAN_CTRL  D4
-#define BED_WIN_CTRL  D5
-#define BED_LIG_CTRL  D6
-#define BED_FAN_CTRL  D7
+#define KIT_WIN_CTRL  D1
+#define KIT_LIG_CTRL  D2
+#define KIT_FAN_CTRL  D3
+#define LIV_LIG_CTRL  D4
+#define LIV_FAN_CTRL  D5
+#define BED_WIN_CTRL  D6
+#define BED_LIG_CTRL  D7
+#define BED_FAN_CTRL  D8
 
 #define WIFI_SSID "Sieu nhan gao"
 #define WIFI_PASS "igategw020"
